@@ -1,72 +1,277 @@
 ---
-title: "Bicycle Sharing Activity"
+title: "Final Project"
 author: "Feng Ding"
-date: "10/22/2019"
-output: 
-    html_notebook:
-    fig_height: 6
-    fig_width: 10
+date: "12/15/2019"
+output:
+  html_document:
+    df_print: paged
+  fig_width: 10
+  fig_height: 6
+  html_notebook: null
 ---
 
 
-# Set Up
+
+Introduction: For the final project, I used the skills that STAT 184 introduced to analyze the area of my interest which is music. I used data wrangling skills to get the data graph ready and then use different types of graphs to present the result and therefore answer the research questions. The questions are mainly about the popularity of music genres in recent years.
+
+Note: Given that the project is mainly for practice purpose, I choosed two synthetically generated music dataset for a small imaginary Music Lables. Therefore, any conclusions in the project report should not be considered as related to real life situations.
+
 
 ### Clean up environment and load packages
 ```{r}
 # clean up the RStudio environment 
 rm(list = ls())
-# load all packages here: `mosaic`, `tidyverse`, `lubridate`, and all others used
 
+# load all packages here
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
-
-
-```
+library(tibble)
+``` 
 
 ### Data Intake
-
-The code chunk below loads the data for you, but you should study each line to understand what it's doing.
-
 ```{r}
-### Load the station data set into our RStudio environment as described in the text
-Stations <- mosaic::read.file("http://tiny.cc/dcf/DC-Stations.csv")
-### Load the station data set into our RStudio environment as described in the text
-# data_site <- "http://tiny.cc/dcf/2014-Q4-Trips-History-Data.rds"          # full data with 600k rows (uncomment to use)
-data_site <- "http://tiny.cc/dcf/2014-Q4-Trips-History-Data-Small.rds"    # small data with 10k rows 
-Trips <- readRDS(gzcon(url(data_site)))
-### Backup code if you need to download the .rds file from the web and load a local version
-# Trips <- readRDS("2014-Q4-Trips-History-Data-Small.rds")
-# Trips <- readRDS("2014-Q4-Trips-History-Data.rds")
+# The code chunk below loads the data.
+album <- read.csv("albums.csv")
+artist <- read.csv("artists.csv")
 ```
 
 
 
 ### Always inspect the data tables when you load them
 ```{r}
-head(Stations)
-head(Trips)
+head(album)
+head(artist)
+```
+
+
+
+### Further inspect the data set.
+```{r}
+str(album)
+str(artist)
 ```
 
 
 
 
-### Plot check-out times. (reproduce Figure 17.1: Use of shared bicycles over the three months in Q4.)
+### Observe that the artist_id variable in frame album corresponds to the variable id in frame artist. This observation motivates me to do a join operation of two data frame.
+```{r}
+album %>%
+  arrange(artist_id) %>%
+  head(10)
+
+head(artist)
+
+#The joined data frame named new here.
+new <- left_join(album,artist,by = c("artist_id" = "id"))
+head(new)
+
+# inspect the joined data frame.
+str(new)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+### *Research Question 1:* find the top 5 genres that are the most popular from 2000-2018.
+
+
+
+
+
+
+
+
+
+```{r}
+new %>%
+  group_by(genre) %>%
+  mutate(sales = as.numeric(num_of_sales)) %>%
+  summarise(sale_count = sum(sales)) %>%
+  arrange(desc(sale_count))
+
+```
+
+
+
+
+
+### *Answer:* based on the total number of sales from 2000-2018, we claim that Indie, Pop, Rap, Rock and Pop-Rock are the top5 most popular.
+
+
+
+
+
+
+
+### *Research Question 2:* for these top5 genre, were they as popular as now 10 years before?
+
+
+
+
+```{r}
+# Draw a box plot graph that displays the five gruops' difference of sales in 2008 and 2018.
+new %>%
+  filter(genre %in% c("Indie","Pop","Rap","Rock","Pop-Rock"),
+         year_of_pub %in%  c("2018","2008")) %>%
+  select(genre, year_of_pub, num_of_sales) %>%
+  ggplot( aes(x = genre, y = num_of_sales )) +
+  geom_point() +
+  geom_boxplot() +
+  facet_wrap(~year_of_pub)
+```
+
+
+```{r}
+# Box plot might be a little hard to see, here is the side by side bar graph:
+
+new %>%
+  filter(genre %in% c("Indie","Pop","Rap","Rock","Pop-Rock"),
+         year_of_pub %in%  c(2008,2018)) %>%
+  select(genre, year_of_pub, num_of_sales)%>%
+  mutate(year = as.factor(year_of_pub)) %>%
+  ggplot( aes(x= genre, y= num_of_sales ,fill = year)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+```
+
+
+
+
+
+
+
+
+
+
+### *Answer:* based on the boxplot and bar chart above, there seems to have no significant change between the number of sales in 2008 and 2018. Therefore, they were as popular as they are right now 10 year before.
+
+
+
+
+
+
+
+### *Research Question 3:* Find the popularity of these top5 genre from 2000 - 2018 instead just comparing two individual years.
+
+
+
+
+
+```{r}
+new %>% 
+  filter(genre %in% c("Indie","Pop","Rap","Rock","Pop-Rock")) %>%
+  select(genre,year_of_pub,num_of_sales) %>% 
+  group_by(genre, year_of_pub) %>%
+  summarise(sale = sum(num_of_sales)) %>%
+  ggplot( aes(year_of_pub ,sale ) ) +
+  geom_line( aes(color = genre) )
+
+```
+
+
+
+
+
+
+
+### *Answer:* based on the graph above, Indie has always lead the number of sales over the 18 years. Around 2002, Pop catches up for a while but eventually droped to number 2, and kept the sliver medal from then on. For Pop-rock, Rap, Rock, they seem to constantly running neck and neck with each other for the honur of the bronze medal. It's hard to tell whcih one wins, but we do see around 2006 to 2007, the rap genre leads the sale for a while.
+
+
+
+
+
+
+
+
+
+### *Research Question 4:* Does televison channel or music critics magzine like those 5 genres ?
+
+
+
+
+
+
 ```{r}
 
+new %>%
+  filter(genre %in% c("Indie","Pop","Rap","Rock","Pop-Rock")) %>%
+  select(genre,year_of_pub, rolling_stone_critic, mtv_critic, music_maniac_critic) %>%
+  group_by(genre,year_of_pub) %>%
+  summarise( RS_score = mean(rolling_stone_critic),
+             MTV_score = mean(mtv_critic),
+             MMC_score = mean(music_maniac_critic)) %>%
+  pivot_longer(cols = ends_with("score"), names_to = "TVchannel",values_to = "score") %>%
+  ggplot( aes (x= year_of_pub , y = score ) ) + 
+  geom_line( aes (color = TVchannel) ) + 
+  facet_wrap( ~ genre)
+
+
 ```
 
 
 
 
-# Section: How Long?
 
-Make box & whisker plot showing the distribution of rental duration by client type.  As instructed in the text, make sure you either configure your scale or use a filter to suppress outliers from dictating the axis range.
+
+### *Answer:* based on the graph above, MMC, MTV and Rolling Stones tends to rate the music of Indie genre a score from 2.6 to around 2.9. And the rating is pretty stable through out the 18 years. The stroy for Pop is about the same, only the score can drop to 2.5. The Pop-Rock and Rap are pretty similar, ranging from 2.5 to 3. For Rock, the rating is not so stable. Around 2005, MTV tends to rate the music of Rock genre to 3.2 points, but around the same time, MMC only rates about 2.5. 
+
+
+
+
+
+
+
+
+### *Research Question 5:* How would you describe the relationship among the 36 genres in the data?
 ```{r}
+cluster <- 
+  new %>%
+  select(genre, year_of_pub, num_of_tracks, num_of_sales, rolling_stone_critic, mtv_critic, music_maniac_critic) %>%
+  group_by(genre) %>%
+  summarise( avg_tracks = mean(num_of_tracks),
+             avg_sales = mean(num_of_sales),
+             avg_RS = mean(rolling_stone_critic),
+             avg_MTV = mean(mtv_critic),
+             avg_MMC = mean(music_maniac_critic))
+
+
+cluster <- column_to_rownames(cluster, var = "genre")
+
+Diffs <- dist(cluster)
+hc <- hclust(Diffs)
+plot(hc, hang=-1)
+
 
 ```
 
 
 
-# Section: When are bikes used?
+
+### *Answer:* I used machine learning method to sort the relationship between the genres out, based on numeric variables including: average number of tracks per album, average sales over 2000 to 2018 and average critical rating they get. The result is presented as the Cluster Dendrogram above. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
